@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#5b4df6">
+  <meta name="description" content="A fun random chit drawing app with scratch-to-reveal cards">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <title>Chit Draw</title>
+  <style>
+    :root{
+      --primary:#5b4df6;--primary2:#7258f7;--ink:#111b3d;--muted:#63708d;
+      --line:#e6eaf4;--bg:#f7f9ff;--card:#fff;--success:#1e9b68;
+      --shadow:0 16px 40px rgba(37,48,92,.10);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      color:var(--ink);background:linear-gradient(135deg,#f2f7ff 0%,#faf8ff 52%,#f5f2ff 100%);min-height:100vh}
+    button,textarea{font:inherit}
+    button{cursor:pointer}
+    .app{min-height:100vh;padding:24px}
+    .shell{max-width:1080px;margin:0 auto}
+    .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px}
+    .brand-mark{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;
+      background:linear-gradient(135deg,#dcecff,#eee8ff);font-size:21px}
+    .steps{display:flex;gap:8px;align-items:center}
+    .step{padding:7px 11px;border-radius:999px;font-size:12px;font-weight:700;color:#7b86a1;background:#eef1f8}
+    .step.active{background:#e7e3ff;color:#5142e9}
+    .screen{display:none}.screen.active{display:block}
+    .hero{text-align:center;padding:20px 0 24px}
+    .hero .emoji{font-size:52px;line-height:1;margin-bottom:12px}
+    h1{font-size:42px;letter-spacing:-1.6px;margin:0 0 8px}
+    h2{font-size:34px;letter-spacing:-1px;margin:0 0 8px}
+    .subtitle{color:var(--muted);font-size:17px;line-height:1.55;margin:0 auto;max-width:590px}
+    .panel{background:rgba(255,255,255,.92);border:1px solid rgba(226,231,243,.95);border-radius:24px;
+      box-shadow:var(--shadow);padding:28px}
+    .panel.narrow{max-width:700px;margin:0 auto}
+    .label{font-size:23px;font-weight:800;margin-bottom:7px}
+    .hint{color:var(--muted);font-size:14px;margin-bottom:16px}
+    textarea{width:100%;height:300px;resize:vertical;border:1.5px solid #dfe4ef;border-radius:15px;
+      padding:16px;font-size:16px;line-height:1.55;outline:none;color:var(--ink);background:#fff}
+    textarea:focus{border-color:#8276fa;box-shadow:0 0 0 4px #eceaff}
+    .meta{display:flex;justify-content:space-between;align-items:center;margin:10px 2px 20px;color:#60708d;font-size:14px}
+    .primary{border:0;width:100%;padding:15px 18px;border-radius:14px;background:linear-gradient(135deg,var(--primary),var(--primary2));
+      color:#fff;font-weight:800;font-size:16px;box-shadow:0 10px 22px rgba(91,77,246,.24)}
+    .primary:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .secondary{border:1.5px solid #ddd9ff;background:#fff;color:#5546e9;font-weight:800;padding:13px 18px;border-radius:13px}
+    .back{border:0;background:transparent;color:#52627f;font-weight:700;padding:8px 0;margin-bottom:14px}
+    .pick-head{text-align:center;margin-bottom:24px}
+    .chits{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:720px;margin:0 auto}
+    .chit{aspect-ratio:1/1.18;border:0;border-radius:17px;background:repeating-linear-gradient(135deg,#d8eaff 0 9px,#cfe4ff 9px 18px);
+      box-shadow:0 9px 20px rgba(73,105,157,.14);color:#78a0cc;font-size:52px;font-weight:300;
+      transition:transform .18s,box-shadow .18s,opacity .25s}
+    .chit:hover{transform:translateY(-5px) scale(1.02);box-shadow:0 16px 28px rgba(73,105,157,.20)}
+    .chit.used{opacity:.25;pointer-events:none}
+    .chit.selected{animation:pulse .75s ease-in-out infinite alternate}
+    @keyframes pulse{to{transform:scale(1.05);box-shadow:0 0 0 7px #e9e5ff,0 18px 35px rgba(91,77,246,.25)}}
+    .info{margin:24px auto 0;max-width:720px;background:#eef7ff;border-radius:14px;padding:13px 16px;color:#52647f;font-size:14px;text-align:center}
+    .scratch-wrap{max-width:620px;margin:25px auto 0}
+    .scratch-card{position:relative;height:350px;border-radius:24px;overflow:hidden;background:#fff;
+      box-shadow:0 20px 45px rgba(50,58,95,.16);border:1px solid #eee9db}
+    .reveal{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(circle at 50% 40%,#fff 0,#fff 35%,#fff8df 100%)}
+    .reveal .name{font-size:56px;font-weight:900;letter-spacing:-2px;text-align:center;padding:20px}
+    .reveal .caption{position:absolute;bottom:44px;color:#61708a;font-weight:700}
+    #scratchCanvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:crosshair}
+    .scratch-tip{text-align:center;color:var(--muted);font-size:14px;margin:15px 0}
+    .result{display:none;max-width:620px;margin:16px auto 0;padding:16px;border-radius:16px;background:#e5f8ef;color:var(--success);text-align:center;font-weight:900;font-size:18px}
+    .actions{display:flex;gap:12px;max-width:620px;margin:16px auto 0}
+    .actions>*{flex:1}
+    .confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:10}
+    .piece{position:absolute;width:9px;height:15px;top:-30px;animation:fall 1.8s linear forwards;opacity:.9}
+    @keyframes fall{to{transform:translate3d(var(--x),110vh,0) rotate(720deg)}}
+    .empty{text-align:center;color:#6c7892;padding:35px}
+    @media(max-width:700px){
+      .app{padding:14px}.topbar{margin-bottom:5px}.steps{display:none}
+      h1{font-size:35px}h2{font-size:30px}.hero{padding:12px 0 18px}.panel{padding:19px;border-radius:20px}
+      .chits{grid-template-columns:repeat(3,1fr);gap:10px}.chit{font-size:40px}
+      .scratch-card{height:310px}.reveal .name{font-size:43px}
+      .actions{flex-direction:column}.actions button{width:100%}
+    }
+    @media(max-width:390px){.chits{grid-template-columns:repeat(2,1fr)}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand"><div class="brand-mark">🎩</div> Chit Draw</div>
+      <div class="steps">
+        <span class="step active" id="s1">1. Enter</span>
+        <span class="step" id="s2">2. Pick</span>
+        <span class="step" id="s3">3. Reveal</span>
+      </div>
+    </div>
+
+    <section class="screen active" id="home">
+      <div class="hero"><div class="emoji">🎩</div><h1>Chit Draw</h1>
+        <p class="subtitle">Add names or items and pick a random chit with a fun scratch reveal!</p></div>
+      <div class="panel narrow">
+        <div class="label">Enter Chits</div>
+        <div class="hint">Type each name or item on a new line.</div>
+        <textarea id="names" placeholder="Amit&#10;Priya&#10;Rahul&#10;Sneha&#10;Vikram"></textarea>
+        <div class="meta">
+  <span id="count">Total items: 0</span>
+  <span id="saveStatus">Saved in this browser</span>
+</div>
+        <button class="primary" id="nextBtn" disabled>Next&nbsp; →</button>
+      </div>
+    </section>
+
+    <section class="screen" id="pick">
+      <button class="back" id="backHome">←&nbsp; Back</button>
+      <div class="pick-head"><h2>Pick a Chit</h2><p class="subtitle">Click on a chit to select one randomly.</p></div>
+      <div class="chits" id="chits"></div>
+      <div class="info">ⓘ All chits are identical. Click on any one chit.</div>
+    </section>
+
+    <section class="screen" id="reveal">
+      <button class="back" id="backPick">←&nbsp; Back</button>
+      <div class="pick-head"><h2>Scratch to Reveal!</h2><p class="subtitle">Scratch the card to see who you got.</p></div>
+      <div class="scratch-wrap">
+        <div class="scratch-card" id="scratchCard">
+          <div class="reveal">
+            <div class="name" id="winner"></div>
+            <div class="caption">Your randomly selected chit</div>
+          </div>
+          <canvas id="scratchCanvas"></canvas>
+        </div>
+        <p class="scratch-tip">Use your finger or mouse to scratch the card ✨</p>
+        <div class="result" id="result">🎉 It's <span id="winner2"></span>!</div>
+        <div class="actions">
+          <button class="secondary" id="drawAnother">↻&nbsp; Draw Another</button>
+          <button class="primary" id="startOver">⌂&nbsp; Start Over</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+<div class="confetti" id="confetti"></div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let names = [], remaining = [], winner = null, scratchStarted = false, revealed = false;
+
+  const screens = {home:$('home'),pick:$('pick'),reveal:$('reveal')};
+  function show(name){
+    Object.values(screens).forEach(x=>x.classList.remove('active'));
+    screens[name].classList.add('active');
+    $('s1').classList.toggle('active',name==='home');
+    $('s2').classList.toggle('active',name==='pick');
+    $('s3').classList.toggle('active',name==='reveal');
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  function parsed(){
+    return $('names').value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  }
+  const STORAGE_KEY = 'chit-draw-items';
+
+  function updateInputState(){
+    const n=parsed();
+    $('count').textContent=`Total items: ${n.length}`;
+    $('nextBtn').disabled=n.length<2;
+  }
+
+  function saveItems(){
+    try {
+      localStorage.setItem(STORAGE_KEY, $('names').value);
+      $('saveStatus').textContent='Saved in this browser';
+    } catch(e) {
+      $('saveStatus').textContent='Unable to save locally';
+    }
+  }
+
+  function loadItems(){
+    try {
+      const saved=localStorage.getItem(STORAGE_KEY);
+      if(saved !== null){
+        $('names').value=saved;
+        $('saveStatus').textContent='Loaded from this browser';
+      }
+    } catch(e) {}
+    updateInputState();
+  }
+
+  $('names').addEventListener('input',()=>{
+    updateInputState();
+    saveItems();
+  });
+
+  loadItems();
+  $('nextBtn').onclick=()=>{
+    names=parsed(); remaining=names.map((value,i)=>({value,id:i}));
+    buildChits(); show('pick');
+  };
+  $('backHome').onclick=()=>show('home');
+  $('backPick').onclick=()=>{buildChits();show('pick')};
+
+  function buildChits(){
+    const box=$('chits'); box.innerHTML='';
+    if(!remaining.length){box.innerHTML='<div class="empty" style="grid-column:1/-1">All chits have been drawn. Start over to play again.</div>';return}
+    remaining.forEach((item,i)=>{
+      const b=document.createElement('button'); b.className='chit'; b.textContent='?'; b.dataset.index=i;
+      b.setAttribute('aria-label','Select chit');
+      b.onclick=()=>selectChit(b,i);
+      box.appendChild(b);
+    });
+  }
+  function secureRandomIndex(max){
+    if(max<=1)return 0;
+    if(window.crypto?.getRandomValues){
+      const a=new Uint32Array(1); window.crypto.getRandomValues(a);
+      return Math.floor((a[0]/4294967296)*max);
+    }
+    return Math.floor(Math.random()*max);
+  }
+  function selectChit(button, index){
+    if(!remaining.length)return;
+    document.querySelectorAll('.chit').forEach(b=>b.disabled=true);
+    const chosenIndex=secureRandomIndex(remaining.length);
+    const chosen=remaining.splice(chosenIndex,1)[0];
+    button.classList.add('selected');
+    setTimeout(()=>openReveal(chosen.value),650);
+  }
+  function openReveal(value){
+    winner=value; $('winner').textContent=value; $('winner2').textContent=value;
+    $('result').style.display='none'; revealed=false; scratchStarted=false;
+    show('reveal'); setupScratch();
+  }
+
+  function setupScratch(){
+    const canvas=$('scratchCanvas'), card=$('scratchCard');
+    const rect=card.getBoundingClientRect(), dpr=Math.max(1,Math.min(2,devicePixelRatio||1));
+    canvas.width=Math.floor(rect.width*dpr); canvas.height=Math.floor(rect.height*dpr);
+    canvas.style.width=rect.width+'px';canvas.style.height=rect.height+'px';
+    const ctx=canvas.getContext('2d');
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    const g=ctx.createLinearGradient(0,0,rect.width,rect.height);
+    g.addColorStop(0,'#f7c948');g.addColorStop(.45,'#dba82d');g.addColorStop(1,'#f4d46d');
+    ctx.fillStyle=g;ctx.fillRect(0,0,rect.width,rect.height);
+    // Decorative metallic scratches
+    for(let i=0;i<70;i++){
+      ctx.strokeStyle=i%3===0?'rgba(255,255,255,.28)':'rgba(125,87,10,.12)';
+      ctx.lineWidth=1+Math.random()*3;ctx.beginPath();
+      ctx.moveTo(Math.random()*rect.width,Math.random()*rect.height);
+      ctx.lineTo(Math.random()*rect.width,Math.random()*rect.height);ctx.stroke();
+    }
+    ctx.fillStyle='rgba(255,255,255,.92)';ctx.font='800 25px system-ui';
+    ctx.textAlign='center';ctx.fillText('SCRATCH HERE',rect.width/2,rect.height/2-3);
+    ctx.font='14px system-ui';ctx.fillStyle='rgba(75,57,20,.7)';
+    ctx.fillText('Reveal your chit',rect.width/2,rect.height/2+25);
+
+    let drawing=false,last={x:0,y:0}, total=0;
+    function pos(e){
+      const r=canvas.getBoundingClientRect();
+      const p=e.touches?e.touches[0]:e;
+      return {x:p.clientX-r.left,y:p.clientY-r.top};
+    }
+    function scratch(e){
+      if(!drawing)return;
+      e.preventDefault();
+      const p=pos(e);ctx.globalCompositeOperation='destination-out';
+      ctx.lineWidth=48;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(last.x,last.y);ctx.lineTo(p.x,p.y);ctx.stroke();
+      last=p;total++;
+      if(total%5===0)checkReveal();
+    }
+    function start(e){drawing=true;last=pos(e);scratchStarted=true;scratch(e)}
+    function end(){drawing=false;checkReveal()}
+    canvas.onmousedown=start;canvas.onmousemove=scratch;window.onmouseup=end;
+    canvas.ontouchstart=start;canvas.ontouchmove=scratch;canvas.ontouchend=end;
+  }
+  function checkReveal(){
+    if(revealed||!scratchStarted)return;
+    const canvas=$('scratchCanvas'), ctx=canvas.getContext('2d');
+    try{
+      const data=ctx.getImageData(0,0,canvas.width,canvas.height).data;
+      let transparent=0, samples=0;
+      const step=16;
+      for(let y=0;y<canvas.height;y+=step)for(let x=0;x<canvas.width;x+=step){
+        samples++; if(data[(y*canvas.width+x)*4+3]<80)transparent++;
+      }
+      if(transparent/samples>.48) revealDone();
+    }catch{}
+  }
+  function revealDone(){
+    if(revealed)return;revealed=true;
+    $('scratchCanvas').style.pointerEvents='none';
+    $('result').style.display='block'; confetti();
+  }
+  function confetti(){
+    const box=$('confetti');box.innerHTML='';
+    for(let i=0;i<65;i++){
+      const p=document.createElement('i');p.className='piece';
+      p.style.left=Math.random()*100+'%';p.style.setProperty('--x',(Math.random()*260-130)+'px');
+      p.style.animationDelay=(Math.random()*.45)+'s';
+      p.style.background=`hsl(${Math.floor(Math.random()*360)} 85% 60%)`;
+      box.appendChild(p);
+    }
+    setTimeout(()=>box.innerHTML='',2500);
+  }
+  $('drawAnother').onclick=()=>{
+    if(!remaining.length){alert('All chits have been drawn.');return}
+    buildChits();show('pick');
+  };
+  $('startOver').onclick=()=>{
+    names=[];remaining=[];winner=null;
+    // Keep the saved list so it is available the next time the app is opened.
+    loadItems();
+    show('home');
+  };
+  window.addEventListener('resize',()=>{if(screens.reveal.classList.contains('active')&&!revealed)setupScratch()});
+})();
+</script>
+</body>
+</html>

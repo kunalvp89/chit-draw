@@ -1,0 +1,9 @@
+{
+  "name": "Chit Draw",
+  "short_name": "Chit Draw",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f9ff",
+  "theme_color": "#5b4df6",
+  "description": "Random chit drawing with scratch-to-reveal cards."
+}
